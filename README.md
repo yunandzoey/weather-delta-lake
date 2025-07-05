@@ -2,4 +2,4 @@
 
 ## Architecture
 
-(placeholder)
+![Architecture](assets/architecture.png)
