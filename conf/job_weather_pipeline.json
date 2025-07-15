@@ -10,16 +10,14 @@
       "task_key": "bronze_ingest",
       "notebook_task": {
         "notebook_path": "/Workspace/Users/chiuyunhan@gmail.com/weather-delta-lake/src/01_ingest_weather_bronze"
-      },
-      "new_cluster": { "runtime_engine": "SERVERLESS" }
+      }
     },
     {
       "task_key": "silver_daily",
       "depends_on": [ { "task_key": "bronze_ingest" } ],
       "notebook_task": {
         "notebook_path": "/Workspace/Users/chiuyunhan@gmail.com/weather-delta-lake/src/02_transform_weather_silver"
-      },
-      "new_cluster": { "runtime_engine": "SERVERLESS" }
+      }
     }
+  ]
 }
-
