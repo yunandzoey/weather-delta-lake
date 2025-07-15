@@ -7,7 +7,9 @@
         "notebook_path": "/Workspace/Users/chiuyunhan@gmail.com/weather-delta-lake/src/01_ingest_weather_bronze",
         "base_parameters": { "lat": "52.52", "lon": "13.405" }
       },
-      "runtime_engine": "SERVERLESS"
+      "new_cluster": {                      
+        "runtime_engine": "SERVERLESS"
+      }
     }
   ],
   "schedule": {
