@@ -1,5 +1,10 @@
 {
   "name": "weather_pipeline_hourly",
+  "schedule": {
+    "quartz_cron_expression": "0 0 * * * ?",
+    "timezone_id": "Europe/Berlin"
+  },
+  "max_concurrent_runs": 1,
   "tasks": [
     {
       "task_key": "bronze_ingest",
@@ -16,10 +21,5 @@
       },
       "new_cluster": { "runtime_engine": "SERVERLESS" }
     }
-  ],
-  "schedule": {
-    "quartz_cron_expression": "0 0 * * * ?",
-    "timezone_id": "Europe/Berlin"
-  },
-  "max_concurrent_runs": 1
 }
+
