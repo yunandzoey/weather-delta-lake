@@ -21,6 +21,5 @@
       },
       "new_cluster": { "runtime_engine": "SERVERLESS" }
     }
-  ]
 }
 
