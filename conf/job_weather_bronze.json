@@ -1,0 +1,18 @@
+{
+  "name": "weather_bronze_ingest_hourly",
+  "tasks": [
+    {
+      "task_key": "bronze_ingest",
+      "notebook_task": {
+        "notebook_path": "/Repos/<user>/weather-delta-lake/src/01_ingest_weather_bronze",
+        "base_parameters": { "lat": "52.52", "lon": "13.405" }
+      },
+      "runtime_engine": "SERVERLESS"
+    }
+  ],
+  "schedule": {
+    "quartz_cron_expression": "0 0 * * * ?",
+    "timezone_id": "Europe/Berlin"
+  },
+  "max_concurrent_runs": 1
+}
