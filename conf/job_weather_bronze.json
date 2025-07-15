@@ -4,7 +4,7 @@
     {
       "task_key": "bronze_ingest",
       "notebook_task": {
-        "notebook_path": "/Repos/<user>/weather-delta-lake/src/01_ingest_weather_bronze",
+        "notebook_path": "/Workspace/Users/chiuyunhan@gmail.com/weather-delta-lake/src/01_ingest_weather_bronze",
         "base_parameters": { "lat": "52.52", "lon": "13.405" }
       },
       "runtime_engine": "SERVERLESS"
