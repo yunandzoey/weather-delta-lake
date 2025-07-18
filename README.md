@@ -1,130 +1,117 @@
-# Weather → Delta Lake (Databricks CE)
+# Weather → Delta Lake Pipeline (Databricks CE)
 
-> **Status:** Bronze & Silver layers live • Pipeline hourly on Serverless • DQ ✅
+> **A hands‑on demo pipeline** that ingests hourly weather forecasts, lands them in Delta Lake bronze, rolls up daily silver aggregates with data‑quality rules, and schedules everything on Databricks Free Edition (Serverless Jobs Compute).
 
-![architecture](assets/architecture.png)
-
----
-
-## ✨ Project Overview
-
-A lightweight pipeline that ingests hourly weather data from the **Open‑Meteo API**, lands it in **Delta Lake** on Databricks Community/Free Edition, and surfaces a clean daily table ready for analytics.
-
-| Layer      | Format           | Schedule | Key Notebook                  | Output Table            |
-| ---------- | ---------------- | -------- | ----------------------------- | ----------------------- |
-| **Bronze** | JSON → Delta     | Hourly   | `01_ingest_weather_bronze`    | `weather_bronze.hourly` |
-| **Silver** | Aggregated Delta | Hourly   | `02_transform_weather_silver` | `weather_silver.daily`  |
+![Architecture diagram](assets/architecture.png)
 
 ---
 
-## 📂 Repository Layout
+## 📌 Project status
+
+| Milestone                           | Delivered  | Key artefacts                                                              |
+| ----------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| **1 · Bronze ingest (hourly)**      | ✅ Live     | `src/01_ingest_weather_bronze.ipynb` · `conf/job_weather_bronze.json`      |
+| **2 · Silver daily + DQ**           | ✅ Live     | `src/02_transform_weather_silver.ipynb` · `conf/job_weather_pipeline.json` |
+| **3 · CI / Alerts**                 | 🔄 Next    | GitHub Action, Slack webhook                                               |
+| 4 · Perf tuning (OPTIMIZE / VACUUM) | 🔄 Planned | maintenance notebook                                                       |
+| 5 · SQL dashboard (KPIs)            | 🔄 Planned | Databricks SQL artefacts                                                   |
+
+## Tech stack (100 % free‑tier)
+
+| Layer                | Tooling                                                 |
+| -------------------- | ------------------------------------------------------- |
+| Orchestration        | Databricks **Serverless Jobs Compute** (Free Edition)   |
+| Processing           | PySpark 3.5 • Python 3.11                               |
+| Storage              | Delta Lake — Bronze / Silver tables in `hive_metastore` |
+| CI / CD              | GitHub Actions · Databricks CLI v0.258                  |
+| Testing              | Pytest + Spark Connect (local)                          |
+| Docs / Dev container | VS Code Dev Containers (`.devcontainer/`)               |
+
+## Repo layout
 
 ```
 weather-delta-lake/
-├── src/
-│   ├── 01_ingest_weather_bronze.ipynb
-│   └── 02_transform_weather_silver.py
-├── conf/
-│   ├── job_weather_bronze.json          # legacy single‑task job (kept for reference)
-│   └── job_weather_pipeline.json        # live 2‑task pipeline
-├── tests/
-│   ├── test_ingest_weather.py
-│   └── test_silver_transform.py
-├── docs/architecture.png               # high‑level diagram
-└── README.md                            # you are here
+├─ .devcontainer/              # VS Code cloud‑dev env
+│   ├─ devcontainer.json
+│   └─ Dockerfile
+├─ assets/
+│   └─ architecture.png        # pipeline diagram
+├─ conf/
+│   ├─ job_weather_bronze.json # single‑task ingest
+│   └─ job_weather_pipeline.json  # bronze ➜ silver job
+├─ src/
+│   ├─ 01_ingest_weather_bronze.ipynb    # 168‑h forecast → bronze Delta
+│   └─ 02_transform_weather_silver.ipynb # daily roll‑up + DQ → silver Delta
+├─ tests/
+│   └─ test_silver_transform.ipynb  # unit‑test ideas / fixtures
+├─ LICENSE
+├─ pyproject.toml
+└─ README.md
 ```
 
----
+## Pipeline flow
 
-## ✅ Milestones Completed
+```mermaid
+graph TD
+    A[Open‑Meteo API\n(168‑hour forecast)] -->|hourly JSON| B(Bronze Delta\nweather_bronze.hourly)
+    B -->|dedup & agg| C(Silver Delta\nweather_silver.daily)
+    C --> D[Databricks SQL Dashboard (planned)]
+```
 
-### Milestone 1 — Bronze Ingest
+* **Bronze** — append‑only raw JSON; partition by `ingest_ts_date`.
+* **Silver** — daily upsert (MERGE) keyed by `date + lat + lon`.
 
-* Hourly notebook pulls 168‑h forecast → writes to `weather_bronze.hourly` (Delta).
-* Serverless job **weather\_bronze\_ingest\_hourly** created via JSON & CLI.
-* Smoke test verifies row‑count (168) + schema.
+### Data‑quality rules
 
-### Milestone 2 — Silver Daily + Data Quality
+| Rule            | Check                           | Action           |
+| --------------- | ------------------------------- | ---------------- |
+| **Coverage**    | finished days must have 24 rows | fail task if not |
+| **Temperature** | −60 ≤ avg °C ≤ 60               | flag row         |
+| **Humidity**    | 0 ≤ min % ≤ 100                 | flag row         |
 
-* Deduplicates Bronze rows, aggregates to daily grain.
-* Expectations: full coverage (24 rows), temp −60 … 60 °C, humidity 0–100 %.
-* Upsert (MERGE) logic ensures one row per date + location.
-* Two‑task job **weather\_pipeline\_hourly** (Bronze ➜ Silver) live on Serverless.
-* All finished days show `row_count = 24` & `dq_passed = true`.
+A `dq_passed` boolean rolls up all three rules; task raises an exception if any `false` rows exist.
 
----
+## Quick‑start for reviewers
 
-## 🔄 Getting Started
+```bash
+# 0 Prereqs: git · Python 3.11 · Databricks CLI >= 0.258
 
-1. **Clone repo into Databricks Repos** → authenticate via PAT or GitHub App.
-2. **Compute:** Free/CE uses *Serverless* automatically; no cluster config needed.
-3. **Secrets (optional):**
+# 1 Clone & install dev deps
+$ git clone https://github.com/<your-gh>/weather-delta-lake.git
+$ cd weather-delta-lake
+$ pip install -r requirements-dev.txt
 
-   ```bash
-   databricks secrets create-scope --scope weather_scope
-   # put SLACK_WEBHOOK or future API keys here
-   ```
-4. **Deploy jobs:**
+# 2 Log in to your Databricks CE workspace
+$ databricks auth login --host https://dbc-<hash>.cloud.databricks.com --token
 
-   ```bash
-   # Bronze only
-   databricks jobs create --json @conf/job_weather_bronze.json
+# 3 Deploy the two‑task hourly pipeline
+$ databricks jobs create --json @conf/job_weather_pipeline.json
 
-   # Full pipeline
-   databricks jobs create --json @conf/job_weather_pipeline.json
-   ```
-5. **Run tests locally or in CI**
+# 4 Kick off first run & tail logs
+$ databricks jobs run-now --job-id <id>
+```
 
-   ```bash
-   pip install -r requirements-dev.txt
-   pytest -q
-   ```
+*(Free Edition automatically spins up Serverless compute; no cluster setup needed.)*
 
----
-
-## 📊 Query Examples
+## Smoke‑test SQL (databricks SQL Editor)
 
 ```sql
--- Latest Bronze timestamp
-SELECT MAX(timestamp_utc) FROM weather_bronze.hourly;
+-- Bronze sanity
+SELECT ingest_ts_date, COUNT(*) AS rows
+FROM   weather_bronze.hourly
+GROUP  BY ingest_ts_date ORDER BY ingest_ts_date DESC;
 
--- Daily KPIs
-SELECT date,
-       avg_temp_c,
-       max_wind_kmh
-FROM   weather_silver.daily
-WHERE  dq_passed = true
-ORDER  BY date DESC;
+-- Silver DQ
+SELECT date, row_count, dq_passed
+FROM   weather_silver.daily;
 ```
 
----
+## Author blurb
 
-## 🚧 Roadmap / Next Steps
+I’m **Yunhan CHiu**, a junior data‑engineer comfortable with Python 3.11, Spark, and Databricks tooling.
+This repo demonstrates that I can design, code, automate, and monitor a small production‑style pipeline **solo**—skills 
 
-| Milestone                  | Focus                                                                                         |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| **3 – CI/CD + Monitoring** | GitHub Action auto‑deploys job JSON; Slack/email alerts; weekly OPTIMIZE + VACUUM task        |
-| **4 – Performance Tuning** | Partition/Z‑order validation; Bronze retention policy (VACUUM 7 days)                         |
-| **5 – Analytics & Docs**   | Databricks SQL dashboard (current temp, 7‑day avg, max wind); Loom video demo; project badges |
 
----
+## License
 
-## 🏷 Badges (placeholders)
-
-![build](https://img.shields.io/badge/build-passing-brightgreen)
-![license](https://img.shields.io/badge/license-MIT-blue)
-
----
-
-## 🎥 Loom Demo *(coming soon)*
-
-*Add a short walkthrough once the dashboard is live.*
-
----
-
-## 📝 Lessons Learned (copy‑paste ready for LinkedIn)
-
-> Just shipped a Weather → Delta Lake pipeline on Databricks CE:
-> • **Bronze** hourly ingest via Open‑Meteo
-> • **Silver** daily roll‑ups with Delta MERGE + expectations
-> • 100 % Serverless—no cluster config 🎉  Next up: CI/CD & Slack alerts.
+[MIT](LICENSE) – free to fork, remix, learn.
