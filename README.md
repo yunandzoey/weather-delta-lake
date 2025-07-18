@@ -53,7 +53,7 @@ weather-delta-lake/
 
 ```mermaid
 graph TD
-    A[Open‑Meteo API\n(168‑hour forecast)] -->|hourly JSON| B(Bronze Delta\nweather_bronze.hourly)
+    A[Open‑Meteo API (168‑hour forecast)] -->|hourly JSON| B(Bronze Delta\nweather_bronze.hourly)
     B -->|dedup & agg| C(Silver Delta\nweather_silver.daily)
     C --> D[Databricks SQL Dashboard (planned)]
 ```
