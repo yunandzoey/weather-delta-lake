@@ -106,11 +106,6 @@ SELECT date, row_count, dq_passed
 FROM   weather_silver.daily;
 ```
 
-## Author blurb
-
-I’m **Yunhan CHiu**, a junior data‑engineer comfortable with Python 3.11, Spark, and Databricks tooling.
-This repo demonstrates that I can design, code, automate, and monitor a small production‑style pipeline **solo**—skills 
-
 
 ## License
 
