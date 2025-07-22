@@ -1,29 +1,43 @@
-name: CI/CD Databricks
+name: CI/CD - Weather Delta Lake
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
   test-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Install Python & dependencies
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # 3. Install dependencies
+      - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # 4. Run Pytest
       - name: Run tests
         run: pytest -q
 
+      # 5. Deploy / update Databricks job
       - name: Deploy Databricks Job
         if: success()
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          databricks jobs update \
-            --job-id <your_job_id> \
+          databricks jobs reset \
+            --job-id 835789270060103 \
             --json @conf/job_weather_pipeline.json
