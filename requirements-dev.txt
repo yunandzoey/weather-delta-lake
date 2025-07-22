@@ -1,0 +1,12 @@
+# Core
+pyspark==3.5.0
+requests
+databricks-cli==0.258.0
+
+# Testing
+pytest
+pytest-spark  # optional, lightweight Spark Connect helpers
+
+# Linting / Formatting (optional but good for CI)
+black
+flake8
