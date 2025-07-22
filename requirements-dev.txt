@@ -1,7 +1,7 @@
 # Core
 pyspark==3.5.0
 requests
-databricks-cli==0.258.0
+databricks-cli==0.18.0
 
 # Testing
 pytest
