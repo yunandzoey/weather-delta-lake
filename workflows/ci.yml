@@ -10,18 +10,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Python & deps
+      - name: Install Python & dependencies
         run: |
+          python3 -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run unit tests
+      - name: Run tests
         run: pytest -q
 
-      - name: Deploy job to Databricks
+      - name: Deploy Databricks Job
+        if: success()
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           databricks jobs update \
-            --job-id <job_id> \
+            --job-id <your_job_id> \
             --json @conf/job_weather_pipeline.json
